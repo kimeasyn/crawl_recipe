@@ -19,7 +19,7 @@ if response.status_code == 200:
 
     # 각 레시피에 대한 정보 추출
     for idx, link in enumerate(recipe_links):
-        if idx > 10:
+        if idx > 3:
             break
         relative_url = link.get("href")
 
@@ -33,7 +33,7 @@ if response.status_code == 200:
 
             # 이미지 URL 찾기
             img_tag = recipe_soup.find("a", class_="common_sp_link").find("img")
-            img_url = img_tag["src"] if img_tag else "이미지 없음"
+            img_url = img_tag["src"] if img_tag else ""
 
             # 레시피 제목
             recipe_title = recipe_soup.find("h3").get_text()
@@ -68,12 +68,21 @@ if response.status_code == 200:
                             'amt': seasoning_amt
                         })
 
+            steps = []
+            step_wrapper = recipe_soup.find("div", class_="view_step")
+            view_steps = step_wrapper.find_all("div", class_="media-body")
+            for step in view_steps:
+                steps.append(step.text)
+
             # 결과 출력
             print("url: ", relative_url)
             print("이미지 URL:", img_url)
             print("레시피 제목:", recipe_title)
             print("재료 목록:", ingredient_list)
             print("양념 목록:", seasoning_list)
+            print("순서: ")
+            for i, s in enumerate(steps):
+                print(i+1, ". ", s)
             print("\n")
 
 else:
