@@ -18,8 +18,9 @@ if response.status_code == 200:
     recipe_links = soup.find_all("a", class_="common_sp_link")
 
     # 각 레시피에 대한 정보 추출
-    for link in recipe_links:
-        # 상대 URL 추출
+    for idx, link in enumerate(recipe_links):
+        if idx > 10:
+            break
         relative_url = link.get("href")
 
         # 상대 URL을 절대 URL로 변환
@@ -38,25 +39,40 @@ if response.status_code == 200:
             recipe_title = recipe_soup.find("h3").get_text()
 
             # 재료 목록
-            ingredients = recipe_soup.find_all("div", class_="ready_ingre3")
-            ingredient_list = []
-            for ingredient in ingredients:
-                ingredient_name = ingredient.find("a", class_="link_recipe").get_text()
-                ingredient_quantity = ingredient.find("div", class_="infor")
-                ingre_unit = ingredient_quantity.find("span", class_="cate").get_text()
-                ingre_quantity = ingredient_quantity.find("span", class_="qty").get_text()
-                ingredient_list.append(f"{ingredient_name} - {ingre_quantity} {ingre_unit}")
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-            # 양념 목록
-            seasonings = recipe_soup.find_all("div", class_="ready_ingre3_1")
-            seasoning_list = [seasoning.get_text() for seasoning in seasonings]
+            # 재료 목록이 있는 HTML 요소 선택
+            wrapper = recipe_soup.find("div", class_="ready_ingre3")
+            ul_elements = wrapper.find_all("ul")
+
+            ingredient_list = []
+            seasoning_list = []
+            for ul in ul_elements:
+                name = ul.find('b')
+                if name.text[1:3] == '재료':
+                    li_elements = ul.find_all("li")
+                    for li in li_elements:
+                        ingredient_name = li.contents[0].strip()
+                        ingredient_amt = li.find('span').text
+                        ingredient_list.append({
+                            'name': ingredient_name,
+                            'amt': ingredient_amt
+                        })
+                elif name.text[1:3] == '양념':
+                    li_elements = ul.find_all("li")
+                    for li in li_elements:
+                        seasoning_name = li.contents[0].strip()
+                        seasoning_amt = li.find('span').text
+                        seasoning_list.append({
+                            'name': seasoning_name,
+                            'amt': seasoning_amt
+                        })
 
             # 결과 출력
+            print("url: ", relative_url)
             print("이미지 URL:", img_url)
             print("레시피 제목:", recipe_title)
-            print("재료 목록:")
-            for ingredient in ingredient_list:
-                print(ingredient)
+            print("재료 목록:", ingredient_list)
             print("양념 목록:", seasoning_list)
             print("\n")
 
