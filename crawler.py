@@ -3,10 +3,10 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 base_url = "https://www.10000recipe.com"
-url = f"{base_url}/recipe/list.html?q=쉬운요리"
 
 
 def print_object(obj):
+    print("Page: ", obj['page'])
     print("No: ", obj['idx'])
     # print("url: ", obj['relative_url'])
     print("이미지 URL:", obj['img_url'])
@@ -86,23 +86,49 @@ def find_object(recipe_soup):
     return obj
 
 
-def main():
+def get_content(url):
     response = requests.get(url)
     if response.status_code == 200:
-        # BeautifulSoup 객체 생성
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # 모든 class=common_sp_link인 <a> 태그 가져오기
-        recipe_links = soup.find_all("a", class_="common_sp_link")
-
-        # 각 레시피에 대한 정보 추출
-        for idx, link in enumerate(recipe_links):
-            recipe_soup = get_soup(link)
-            obj = find_object(recipe_soup)
-            obj['idx'] = idx + 1
-            print_object(obj)
+        return response
     else:
-        print("웹페이지 가져오기 실패.")
+        return None
+
+
+def main():
+    url = f"{base_url}/recipe/list.html?q=쉬운요리"
+    response = get_content(url)
+    cnt = 1
+    while response:
+        if response.status_code == 200:
+            # 첫 페이지 BeautifulSoup 객체 생성
+            soup = BeautifulSoup(response.text, 'html.parser')
+            # pagination 정보 get
+            pagination_class = soup.find("ul", class_="pagination")
+            pages = pagination_class.find_all('a')
+            is_continue = True
+            while is_continue:
+                for page_link in pages:
+                    page_url = base_url + page_link["href"]
+                    if page_link.text.isnumeric():
+                        current_page = int(page_link.text)
+                        if current_page > 1:
+                            soup = BeautifulSoup(response.text, 'html.parser')
+                        recipe_links = soup.find_all("a", class_="common_sp_link")
+
+                        # 각 레시피에 대한 정보 추출 및 출력
+                        for idx, link in enumerate(recipe_links):
+                            recipe_soup = get_soup(link)
+                            obj = find_object(recipe_soup)
+                            print(cnt)
+                            obj['idx'] = idx + 1
+                            obj['page'] = current_page
+                            print_object(obj)
+                            cnt += 1
+                    else:
+                        response = get_content(page_url)
+                        is_continue = False
+                if len(pages) < 11:
+                    response = None
 
 
 if __name__ == "__main__":
